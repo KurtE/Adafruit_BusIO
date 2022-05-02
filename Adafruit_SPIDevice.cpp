@@ -120,7 +120,7 @@ bool Adafruit_SPIDevice::begin(void) {
  */
 void Adafruit_SPIDevice::transfer(uint8_t *buffer, size_t len) {
   if (_spi) {
-    // hardware SPI is easy
+// hardware SPI is easy
 
 #if defined(SPARK)
     _spi->transfer(buffer, buffer, len, nullptr);
@@ -167,77 +167,39 @@ void Adafruit_SPIDevice::transfer(uint8_t *buffer, size_t len) {
       if (_dataMode == SPI_MODE0 || _dataMode == SPI_MODE2) {
         towrite = send & b;
         if ((_mosi != -1) && (lastmosi != towrite)) {
-#ifdef BUSIO_USE_FAST_PINIO
-          if (towrite)
-            *mosiPort |= mosiPinMask;
-          else
-            *mosiPort &= ~mosiPinMask;
-#else
-          digitalWrite(_mosi, towrite);
-#endif
+          setMosi(towrite);
           lastmosi = towrite;
         }
 
-#ifdef BUSIO_USE_FAST_PINIO
-        *clkPort |= clkPinMask; // Clock high
-#else
-        digitalWrite(_sck, HIGH);
-#endif
+        setClkHigh();
 
         if (bitdelay_us) {
           delayMicroseconds(bitdelay_us);
         }
 
         if (_miso != -1) {
-#ifdef BUSIO_USE_FAST_PINIO
-          if (*misoPort & misoPinMask) {
-#else
-          if (digitalRead(_miso)) {
-#endif
+          if (getMisoState()) {
             reply |= b;
           }
         }
 
-#ifdef BUSIO_USE_FAST_PINIO
-        *clkPort &= ~clkPinMask; // Clock low
-#else
-        digitalWrite(_sck, LOW);
-#endif
+        setClkLow();
       } else { // if (_dataMode == SPI_MODE1 || _dataMode == SPI_MODE3)
 
-#ifdef BUSIO_USE_FAST_PINIO
-        *clkPort |= clkPinMask; // Clock high
-#else
-        digitalWrite(_sck, HIGH);
-#endif
+        setClkHigh();
 
         if (bitdelay_us) {
           delayMicroseconds(bitdelay_us);
         }
 
         if (_mosi != -1) {
-#ifdef BUSIO_USE_FAST_PINIO
-          if (send & b)
-            *mosiPort |= mosiPinMask;
-          else
-            *mosiPort &= ~mosiPinMask;
-#else
-          digitalWrite(_mosi, send & b);
-#endif
+          setMosi(b);
         }
 
-#ifdef BUSIO_USE_FAST_PINIO
-        *clkPort &= ~clkPinMask; // Clock low
-#else
-        digitalWrite(_sck, LOW);
-#endif
+        setClkLow();
 
         if (_miso != -1) {
-#ifdef BUSIO_USE_FAST_PINIO
-          if (*misoPort & misoPinMask) {
-#else
-          if (digitalRead(_miso)) {
-#endif
+          if (getMisoState()) {
             reply |= b;
           }
         }
@@ -298,7 +260,7 @@ bool Adafruit_SPIDevice::write(const uint8_t *buffer, size_t len,
   }
 
   setChipSelect(LOW);
-  // do the writing
+// do the writing
 #if defined(ARDUINO_ARCH_ESP32)
   if (_spi) {
     if (prefix_len > 0) {
@@ -406,7 +368,7 @@ bool Adafruit_SPIDevice::write_then_read(const uint8_t *write_buffer,
   }
 
   setChipSelect(LOW);
-  // do the writing
+// do the writing
 #if defined(ARDUINO_ARCH_ESP32)
   if (_spi) {
     if (write_len > 0) {

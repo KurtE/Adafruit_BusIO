@@ -39,7 +39,12 @@ typedef enum _BitOrder {
 typedef BitOrder BusIOBitOrder;
 #endif
 
-#if defined(__AVR__) || defined(TEENSYDUINO)
+#if defined(__IMXRT1062__) // Teensy 4.x
+typedef volatile uint32_t BusIO_PortReg;
+typedef uint32_t BusIO_PortMask;
+#define BUSIO_USE_FAST_PINIO
+
+#elif defined(__AVR__) || defined(TEENSYDUINO)
 typedef volatile uint8_t BusIO_PortReg;
 typedef uint8_t BusIO_PortMask;
 #define BUSIO_USE_FAST_PINIO
@@ -101,6 +106,44 @@ private:
 #ifdef BUSIO_USE_FAST_PINIO
   BusIO_PortReg *mosiPort, *clkPort, *misoPort, *csPort;
   BusIO_PortMask mosiPinMask, misoPinMask, clkPinMask, csPinMask;
+
+#if defined(__IMXRT1062__) // Teensy 4.x
+  //#define portOutputRegister(pin)  ((digital_pin_to_info_PGM[(pin)].reg + 0))
+  //#define portSetRegister(pin)     ((digital_pin_to_info_PGM[(pin)].reg + 33))
+  //#define portClearRegister(pin)   ((digital_pin_to_info_PGM[(pin)].reg + 34))
+  //#define portToggleRegister(pin)  ((digital_pin_to_info_PGM[(pin)].reg + 35))
+
+  inline void setMosi(bool towrite) {
+    if (towrite)
+      *(mosiPort + 33) = mosiPinMask;
+    else
+      *(mosiPort + 34) = mosiPinMask;
+  }
+  inline void setClkHigh() { *(clkPort + 33) = clkPinMask; }
+  inline void setClkLow() { *(clkPort + 34) = clkPinMask; }
+  inline void setCSHigh() { *(csPort + 33) = csPinMask; }
+  inline void setCSLow() { *(csPort + 34) = csPinMask; }
+  inline bool getMisoState() { return (*misoPort & misoPinMask); }
+#else
+  inline void setMosi(bool towrite) {
+    if (towrite)
+      *mosiPort |= mosiPinMask;
+    else
+      *mosiPort &= ~mosiPinMask;
+  }
+  inline void setClkHigh() { *clkPort |= clkPinMask; }
+  inline void setClkLow() { *clkPort &= ~clkPinMask; }
+  inline void setCSHigh() { *csPort |= csPinMask; }
+  inline void setCSLow() { *csPort &= ~csPinMask; }
+  inline bool getMisoState() { return (*misoPort & misoPinMask); }
+#endif
+#else
+  inline void setMosi(bool towrite) { digitalWrite(_mosi, towrite); }
+  inline void setClkHigh() { digitalWrite(_sck, HIGH); }
+  inline void setClkLow() { digitalWrite(_sck, LOW); }
+  inline void setCSHigh() { digitalWrite(_cs, HIGH); }
+  inline void setCSLow() { digitalWrite(_cs, LOW); }
+  inline bool getMisoState() { return (digitalRead(_miso)); }
 #endif
   bool _begun;
 };
